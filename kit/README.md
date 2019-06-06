@@ -14,9 +14,9 @@ It contains features to support:
 3. Other helpful utilities (kql generator, ...)
 
 ## TOC
-* [Concept](##concept)  
-* [Usage](##usage)
-* [Examples](##examples)
+* [Concept](#concept)  
+* [Usage](#usage)
+* [Examples](#examples)
 
 ## Concept
 Given a data source, usually the workflow would consist of:  
