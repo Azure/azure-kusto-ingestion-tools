@@ -251,11 +251,6 @@ Uploaded to our azure storage for convenience:
 `curl https://imdb2013dataset.blob.core.windows.net/data/creditcard.csv.gz --output creditcard.csv.tgz`
 `curl https://imdb2013dataset.blob.core.windows.net/data/globalterrorism.csv.gz --output globalterrorism.csv.tgz`   
  
+ Once downloaded and unzipped, same idea, only this time files contain headers, so schema is infered:
 
-### Example 2: CDM  
-  
-`kit ingest --metadata /path/to/cdmmodel.json --meatatype cdm`  
-  
-### Example 3: Apache Hive MetaStore  
-  
-`kit ingest --metadata /path/to/cdmmodel.json --meatatype cdm`
+`ingest -d . --pattern *.csv -h dadubovs1.westus -db ml -q --headers`
