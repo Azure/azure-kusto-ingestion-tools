@@ -76,19 +76,23 @@ def materialize_columns(observed_columns) -> List[Column]:
     return columns
 
 
-def observe_columns_in_object(obj, observed_columns_map: Dict[str, ObservedColumn] = None):
+def observe_columns_in_object(obj, observed_columns_map: Dict[str, ObservedColumn] = None, object_depth=1, path=None):
     observed_columns_map = observed_columns_map or {}
 
     for key, value in obj.items():
-        if key not in observed_columns_map:
-            observed_columns_map[key] = ObservedColumn(name=key)
+        if type(value) is dict and object_depth > 1:
+            observed_columns_map = observe_columns_in_object(value, observed_columns_map, object_depth=object_depth - 1, path=key)
+        else:
+            name = key if path is None else path + '.' + key
+            if name not in observed_columns_map:
+                observed_columns_map[name] = ObservedColumn(name=name)
 
-        observed_columns_map[key].observe(value)
+            observed_columns_map[name].observe(value)
 
     return observed_columns_map
 
 
-def columns_from_json_stream(stream, limit=200, **kwargs) -> Tuple[List[Column], bool]:
+def columns_from_json_stream(stream, limit=200, object_depth=1, **kwargs) -> Tuple[List[Column], bool]:
     import ijson.backends.python as ijson
     import json
 
@@ -110,7 +114,7 @@ def columns_from_json_stream(stream, limit=200, **kwargs) -> Tuple[List[Column],
             if limit is not None and counter >= limit:
                 break
 
-            observed_columns_map = observe_columns_in_object(item, observed_columns_map)
+            observed_columns_map = observe_columns_in_object(item, observed_columns_map, object_depth)
             counter += 1
 
     else:
@@ -118,7 +122,7 @@ def columns_from_json_stream(stream, limit=200, **kwargs) -> Tuple[List[Column],
         while line and counter <= limit:
             try:
                 item = json.loads(line)
-                observed_columns_map = observe_columns_in_object(item, observed_columns_map)
+                observed_columns_map = observe_columns_in_object(item, observed_columns_map, object_depth)
 
                 counter += 1
 

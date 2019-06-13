@@ -28,6 +28,8 @@ class FolderIngestionFlow:
         self.direct = kwargs.get("direct", False)
         self.pattern = kwargs.get("pattern", None)
         self.headers = kwargs.get("headers", False)
+        self.dry = kwargs.get("dry", False)
+        self.object_depth = kwargs.get("object_depth", 1)
 
     def ensure_folder(self):
         files = os.listdir(self.folder)
@@ -49,23 +51,27 @@ class FolderIngestionFlow:
     def run(self):
         self.ensure_folder()
 
-        data_source = DataSource.from_path(self.folder, conflict_mode=self.data_conflict, pattern=self.pattern, headers=self.headers)
+        data_source = DataSource.from_path(self.folder, conflict_mode=self.data_conflict, pattern=self.pattern, headers=self.headers,
+                                           object_depth=self.object_depth)
         target_schema = self.kusto_backend.describe_database(self.target_db)
 
         # TODO: this is somewhat misleading (probably the hardest part here).
         #  we try and match sources with target_database and creating auto-mappings
         manifest = IngestionManifest.from_source_and_database(data_source, target_schema)
 
-        manifest_flow = ManifestIngestionFlow(
-            manifest,
-            target_cluster=self.target_cluster,
-            auth=self.auth,
-            schema_conflict=self.schema_conflict,
-            direct=self.direct,
-            no_wait=self.no_wait,
-        )
+        if self.dry:
+            print(manifest.to_json())
+        else:
+            manifest_flow = ManifestIngestionFlow(
+                manifest,
+                target_cluster=self.target_cluster,
+                auth=self.auth,
+                schema_conflict=self.schema_conflict,
+                direct=self.direct,
+                no_wait=self.no_wait,
+            )
 
-        manifest_flow.run()
+            manifest_flow.run()
 
 
 class FilesIngestionFlow:
@@ -81,6 +87,8 @@ class FilesIngestionFlow:
         self.no_wait = kwargs.get("no_wait", False)
         self.direct = kwargs.get("direct", False)
         self.headers = kwargs.get("headers", False)
+        self.dry = kwargs.get("dry", False)
+        self.object_depth = kwargs.get("object_depth", 1)
 
     def ensure_folder(self):
         total = 0
@@ -105,7 +113,7 @@ class FilesIngestionFlow:
         entities = []
 
         for f in self.files:
-            entities.append(DataEntity.from_path(f, conflict_mode=self.data_conflict, headers=self.headers))
+            entities.append(DataEntity.from_path(f, conflict_mode=self.data_conflict, headers=self.headers, object_depth=self.object_depth))
 
         # If explicitly specified, it means all files are part of the same entity,
         # otherwise, each file is it's own entity.
@@ -123,16 +131,18 @@ class FilesIngestionFlow:
         #  we try and match sources with target_database and creating auto-mappings
         manifest = IngestionManifest.from_entities_and_database(entities, target_schema)
 
-        manifest_flow = ManifestIngestionFlow(
-            manifest,
-            target_cluster=self.target_cluster,
-            auth=self.auth,
-            schema_conflict=self.schema_conflict,
-            direct=self.direct,
-            no_wait=self.no_wait,
-        )
-
-        manifest_flow.run()
+        if self.dry:
+            print(manifest.to_json())
+        else:
+            manifest_flow = ManifestIngestionFlow(
+                manifest,
+                target_cluster=self.target_cluster,
+                auth=self.auth,
+                schema_conflict=self.schema_conflict,
+                direct=self.direct,
+                no_wait=self.no_wait,
+            )
+            manifest_flow.run()
 
 
 class ManifestIngestionFlow:
@@ -200,9 +210,9 @@ class ManifestIngestionFlow:
         return batch_id
 
     def monitor_batch(self, batch_id) -> bool:
-        max_retries = 3
+        max_retries = 9
         retry = 1
-        delay = 180  # TODO: this should be estimated by data size and cluster capacity and reported to the user
+        delay = 45  # TODO: this should be estimated by data size and cluster capacity and reported to the user
         tables_pending = set(op.target for op in self.manifest.operations)
 
         done = len(tables_pending) == 0

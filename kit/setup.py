@@ -29,6 +29,7 @@ setup(
         # TODO: this should be optional, because it is just an attempt to save effort and installation takes a while
         # "azure-cli",
         "typing-inspect",
+        "ijson",
         "adal",
         "click",
         "maya",

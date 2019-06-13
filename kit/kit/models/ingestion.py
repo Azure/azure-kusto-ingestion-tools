@@ -87,8 +87,11 @@ class IngestionManifest(SerializableModel):
             sources[mapping.name] = [f.path for f in entity.files]
 
             ingestion_sources = [
-                IngestionSource(s_files, s_mapping, data_format=s_mapping.split("_")[-1])
-                for s_mapping, s_files in sources.items()
+                IngestionSource(
+                    files=[str(f) for f in s_files],
+                    mapping=s_mapping,
+                    data_format=s_mapping.split("_")[-1]
+                ) for s_mapping, s_files in sources.items()
             ]
 
             operations.append(IngestionOp(target_database.name, ingestion_sources, target_table.name))

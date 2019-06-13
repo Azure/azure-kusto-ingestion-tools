@@ -243,5 +243,32 @@ Uploaded to our azure storage for convenience:
  
  Once downloaded and unzipped, same idea, only this time files contain headers, so schema is infered:
 
-`ingest -d . -h dadubovs1.westus -db ml --headers`
+`kit ingest -d . -h dadubovs1.westus -db ml --headers`
 
+### Example 3 : Complex nested JSON mappings
+
+Let's look at a more advance use case:
+
+Say our data is a json lines files, where each item looks like:
+
+`{"header":{"time":"24-Aug-18 09:42:15", "id":"0944f542-a637-411b-94dd-8874992d6ebc", "api_version":"v2"}, "payload":{"data":"NEEUGQSPIPKDPQPIVFE", "user":"owild@fabrikam.com"}}`
+
+It seems that we have a nested object. let's see what will happen when we try and create an ingestion manifest with `--object-depth 2`
+
+`kit manifest -f nested.json --object-depth 2 -h mycluster.westus -db ml > manifest.json`
+
+This produces the following `manifest.json` which contains the operations to be executed.
+
+```json
+{
+  "databases": [],
+  "mappings":  [],
+  "operations": []
+}
+```
+
+Now, let's say that we don't need the `id` field, we can edit the mapping and save it.
+
+Once we are ready, we can ingest based on the manifest
+
+`kit ingest -m manifest.json -h mycluster.westus`

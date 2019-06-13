@@ -34,8 +34,9 @@ class DataFile:
             return DataFile(path, columns, suffix)
 
         if suffix == 'json':
+            object_depth = kwargs.get('object_depth', 1)
             with open(path, encoding=encoding) as f:
-                columns, multi_line = columns_from_json_stream(f, limit=limit)
+                columns, multi_line = columns_from_json_stream(f, limit=limit, object_depth=object_depth)
 
             return DataFile(path, columns, suffix if not multi_line else 'multijson')
 
@@ -53,7 +54,6 @@ class DataEntity:
     def from_path(cls, path, conflict_mode: DataConflictMode = DataConflictMode.Safe, pattern=None, **kwargs) -> DataEntity:
         data_files = []
         columns = []
-        headers = kwargs.get('headers', False)
 
         if os.path.isdir(path):
             name = os.path.basename(path)
@@ -64,7 +64,7 @@ class DataEntity:
 
             for index, file in enumerate(files):
                 file_path = os.path.join(path, file)
-                df = DataFile.from_file(file_path, headers=headers)
+                df = DataFile.from_file(file_path, **kwargs)
                 data_files.append(df)
 
                 if conflict_mode == DataConflictMode.Safe:
@@ -88,7 +88,7 @@ class DataEntity:
 
         else:
             name = Path(path).with_suffix("").stem
-            df = DataFile.from_file(path, headers=headers)
+            df = DataFile.from_file(path, **kwargs)
             data_files = [df]
             columns = df.columns
 
@@ -107,7 +107,7 @@ class DataSource:
     @classmethod
     def from_path(cls, path, conflict_mode: DataConflictMode = DataConflictMode.Safe, pattern=None, **kwargs) -> DataSource:
         name = os.path.basename(path)
-        headers = kwargs.get('headers', False)
+
         entities = []
         if os.path.isdir(path):
             entity_paths = os.listdir(path)
@@ -116,8 +116,8 @@ class DataSource:
                 entity_path = Path(os.path.join(path, entity_path))
                 if entity_path.is_file():
                     if not pattern or entity_path.match(pattern):
-                        entities.append(DataEntity.from_path(entity_path, conflict_mode=conflict_mode, headers=headers))
+                        entities.append(DataEntity.from_path(entity_path, conflict_mode=conflict_mode, **kwargs))
                 else:
-                    entities.append(DataEntity.from_path(entity_path, conflict_mode=conflict_mode, pattern=pattern, headers=headers))
+                    entities.append(DataEntity.from_path(entity_path, conflict_mode=conflict_mode, pattern=pattern, **kwargs))
 
         return DataSource(name, path, entities)

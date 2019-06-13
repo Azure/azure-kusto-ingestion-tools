@@ -40,19 +40,23 @@ def main(ctx):
 @click.option("--table", "-t", type=str)
 @click.option("--database", "-db", type=str)
 @click.option("--pattern", type=str)
+@click.option("--object-depth", "-od", type=int, default=1)
+@click.option("--dry", is_flag=True, default=False)
 @click.option("--headers", is_flag=True, default=False)
 @click.pass_context
-def ingest(ctx, headers, pattern, database, table, directory, files, host, direct, nowait, app, user):
+def ingest(ctx, headers, dry, object_depth, pattern, database, table, directory, files, host, direct, nowait, app, user):
     from kit.core.ingestion import FolderIngestionFlow
 
     if directory:
         flow = FolderIngestionFlow(
-            directory, host, database, auth=auth_from_cli(app, user, host), direct=direct, no_wait=nowait, pattern=pattern, headers=headers
+            directory, host, database, auth=auth_from_cli(app, user, host), direct=direct, no_wait=nowait, pattern=pattern, headers=headers, dry=dry,
+            object_depth=object_depth
         )
         flow.run()
     elif files:
         flow = FilesIngestionFlow(
-            files.split(','), host, database, target_table=table, auth=auth_from_cli(app, user, host), direct=direct, no_wait=nowait, headers=headers
+            files.split(','), host, database, target_table=table, auth=auth_from_cli(app, user, host), direct=direct, no_wait=nowait, headers=headers,
+            object_depth=object_depth, dry=dry
         )
         flow.run()
 
