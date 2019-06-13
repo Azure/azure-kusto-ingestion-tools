@@ -249,21 +249,115 @@ Uploaded to our azure storage for convenience:
 
 Let's look at a more advance use case:
 
+`wget https://imdb2013dataset.blob.core.windows.net/data/demo.json --no-check-certificate`
+    
+   or
+
+`curl https://imdb2013dataset.blob.core.windows.net/data/demo.json --output demo.json`
+
 Say our data is a json lines files, where each item looks like:
 
 `{"header":{"time":"24-Aug-18 09:42:15", "id":"0944f542-a637-411b-94dd-8874992d6ebc", "api_version":"v2"}, "payload":{"data":"NEEUGQSPIPKDPQPIVFE", "user":"owild@fabrikam.com"}}`
 
-It seems that we have a nested object. let's see what will happen when we try and create an ingestion manifest with `--object-depth 2`
+It seems that we have a nested object. 
+Because we are not sure what will happen, let's dry run.
+Let's try and `--dry` run an ingestion with `--object-depth 2`.
 
-`kit manifest -f nested.json --object-depth 2 -h mycluster.westus -db ml > manifest.json`
+`kit ingest -f demo.json --object-depth 2 -h mycluster.westus -db ml --dry > manifest.json`
 
 This produces the following `manifest.json` which contains the operations to be executed.
 
 ```json
 {
-  "databases": [],
-  "mappings":  [],
-  "operations": []
+  "databases": [
+    {
+      "name": "ml",
+      "tables": []
+    }
+  ],
+  "mappings": [
+    {
+      "name": "demo_from_json",
+      "columns": [
+        {
+          "source": {
+            "dtype": "string",
+            "name": "header.time",
+            "index": null
+          },
+          "target": {
+            "dtype": "string",
+            "name": "header.time",
+            "index": null
+          }
+        },
+        {
+          "source": {
+            "dtype": "string",
+            "name": "header.id",
+            "index": null
+          },
+          "target": {
+            "dtype": "string",
+            "name": "header.id",
+            "index": null
+          }
+        },
+        {
+          "source": {
+            "dtype": "string",
+            "name": "header.api_version",
+            "index": null
+          },
+          "target": {
+            "dtype": "string",
+            "name": "header.api_version",
+            "index": null
+          }
+        },
+        {
+          "source": {
+            "dtype": "string",
+            "name": "payload.data",
+            "index": null
+          },
+          "target": {
+            "dtype": "string",
+            "name": "payload.data",
+            "index": null
+          }
+        },
+        {
+          "source": {
+            "dtype": "string",
+            "name": "payload.user",
+            "index": null
+          },
+          "target": {
+            "dtype": "string",
+            "name": "payload.user",
+            "index": null
+          }
+        }
+      ]
+    }
+  ],
+  "operations": [
+    {
+      "database": "ml",
+      "sources": [
+        {
+          "files": [
+            "demo.json"
+          ],
+          "mapping": "demo_from_json",
+          "options": {},
+          "data_format": "json"
+        }
+      ],
+      "target": "demo"
+    }
+  ]
 }
 ```
 
