@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="azure-kusto-ingestion-tools",
-    version="0.1.0",
+    version="0.2.0",
     description="Kusto Ingestion Tools (Kit)",
     url="https://github.com/Azure/azure-kusto-ingestion-tools",
     author="Microsoft Corporation",

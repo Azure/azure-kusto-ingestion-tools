@@ -216,10 +216,10 @@ or
 
 Query from kusto should show the same:
 
-`kit count --table aka_name -h dadubovs1.westus -db imdb` - should show 901343
+`kit count --table aka_name -h mycluster.westus -db imdb` - should show 901343
 
 And take a peek at the data:
-`kit peek --table aka_name -n 10 -h dadubovs1.westus -db imdb`
+`kit peek --table aka_name -n 10 -h mycluster.westus -db imdb`
 
   
 ### Example 2 : Ingest Kaggle ML Datasets, CSV and JSON
@@ -233,17 +233,21 @@ https://www.kaggle.com/START-UMD/gtd/
 
 Uploaded to our azure storage for convenience:
 
-`wget https://imdb2013dataset.blob.core.windows.net/data/creditcard.csv.gz --no-check-certificate`  
-`wget https://imdb2013dataset.blob.core.windows.net/data/globalterrorism.csv.gz --no-check-certificate`
-`wget https://imdb2013dataset.blob.core.windows.net/data/arxivData.csv.gz --no-check-certificate`
+```
+wget https://imdb2013dataset.blob.core.windows.net/data/creditcard.csv.gz --no-check-certificate  
+wget https://imdb2013dataset.blob.core.windows.net/data/globalterrorism.csv.gz --no-check-certificate
+wget https://imdb2013dataset.blob.core.windows.net/data/arxivData.csv.gz --no-check-certificate
+```
   or   
-`curl https://imdb2013dataset.blob.core.windows.net/data/creditcard.csv.gz --output creditcard.csv.gz`
-`curl https://imdb2013dataset.blob.core.windows.net/data/globalterrorism.csv.gz --output globalterrorism.csv.gz`   
-`curl https://imdb2013dataset.blob.core.windows.net/data/arxivData.json.gz --output arxivData.json.gz`
+```
+curl https://imdb2013dataset.blob.core.windows.net/data/creditcard.csv.gz --output creditcard.csv.gz
+curl https://imdb2013dataset.blob.core.windows.net/data/globalterrorism.csv.gz --output globalterrorism.csv.gz   
+curl https://imdb2013dataset.blob.core.windows.net/data/arxivData.json.gz --output arxivData.json.gz
+```
  
  Once downloaded and unzipped, same idea, only this time files contain headers, so schema is infered:
 
-`kit ingest -d . -h dadubovs1.westus -db ml --headers`
+`kit ingest -d . -h mycluster.westus -db ml --headers`
 
 ### Example 3 : Complex nested JSON mappings
 
@@ -348,7 +352,7 @@ This produces the following `manifest.json` which contains the operations to be 
       "sources": [
         {
           "files": [
-            "demo.json"
+            "C:\\Users\\dadubovs\\temp\\ml_datasets\\demo.json"
           ],
           "mapping": "demo_from_json",
           "options": {},
@@ -363,6 +367,21 @@ This produces the following `manifest.json` which contains the operations to be 
 
 Now, let's say that we don't need the `id` field, we can edit the mapping and save it.
 
-Once we are ready, we can ingest based on the manifest
+
+If we are still unsure, and want to get a better understanding are the commands that will be created, we can inspect the kql
+
+`kit kql -m manifest.json`
+
+Which should output something like:
+
+```
+// Table Creation Commands:
+.create table demo (['header.time']:string,['header.api_version']:string,['payload.data']:string,['payload.user']:string)
+
+// Ingestion Mapping Creation Commands:
+.create table demo ingestion json mapping "demo_from_json" '[{"column":"header.time","path":"$.header.time","datatype":"string"},{"column":"header.api_version","path":"$.header.api_version","datatype":"string"},{"column":"payload.data","path":"$.payload.data","datatype":"string"},{"column":"payload.user","path":"$.payload.user","datatype":"string"}]'
+```
+
+Once we are ready, we can resume our ingestion based on the manifest
 
 `kit ingest -m manifest.json -h mycluster.westus`
