@@ -3,9 +3,10 @@ from __future__ import annotations
 import builtins
 from dataclasses import dataclass
 from datetime import datetime
+from kit.helpers import to_python_name
 from typing import List
 
-from kit.models.serializable import SerializableModel, to_python_name
+from kit.models.serializable import SerializableModel
 
 reserved_keywords = set(dir(builtins))
 
@@ -56,7 +57,7 @@ class ReferenceAttribute(SerializableModel):
 @dataclass
 class Entity(SerializableModel):
     @classmethod
-    def fromdict(cls, d) -> SerializableModel:
+    def from_dict(cls, d) -> SerializableModel:
         d = {to_python_name(k): v for k, v in d.items()}
         if d["_type"] == "LocalEntity":
             return LocalEntity.fromdict(d)

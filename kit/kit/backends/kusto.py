@@ -12,6 +12,7 @@ from azure.kusto.ingest import (
     ReportMethod,
     ReportLevel,
     DataFormat)
+from azure.kusto.ingest._ingestion_properties import ColumnMapping
 
 from kit.dtypes import dotnet_to_kusto_type
 from kit.enums import SchemaConflictMode
@@ -23,7 +24,7 @@ from kit.models.mappings import IngestionMapping
 logger = logging.getLogger("kit")
 
 LIST_COLUMNS_BY_TABLE = ".show database {database_name} schema | where TableName != '' and ColumnName != '' | summarize Columns=make_set(strcat(ColumnName,':',ColumnType)) by TableName"
-CREATE_INGESTION_MAPPING = """.create table {table} ingestion {mapping_type} "{mapping_name}" '[{mappings}]'"""
+CREATE_INGESTION_MAPPING = """.create table {table} ingestion {mapping_type} mapping "{mapping_name}" '[{mappings}]'"""
 
 
 class KustoClientProvider:
@@ -124,33 +125,49 @@ class KustoBackend:
                 # by default, if we can't find a database on the cluster, we will create it
                 pass
 
-    def create_table(self, table: Table, database_name: str):
-        client = self.client_provider.get_engine_client()
+    @classmethod
+    def get_create_ingestion_command(cls, table: str, mapping_name: str, column_mappings: List[ColumnMapping]) -> str:
+        mapping_column_class = column_mappings[0].__class__.__name__
 
+        mapping_type = 'json' if mapping_column_class.lower().startswith('json') else 'csv'
+
+        mappings = []
+
+        for col in column_mappings:
+            col_map_str = '{' + ','.join([f'\"{prop}\":\"{name}\"' for prop, name in vars(col).items()]) + '}'
+            mappings.append(col_map_str)
+
+        mappings_str = ','.join(mappings)
+        return CREATE_INGESTION_MAPPING.format(table=table, mapping_type=mapping_type, mapping_name=mapping_name, mappings=mappings_str)
+
+    @classmethod
+    def get_create_table_command(cls, table: Table) -> str:
         command_format = ".create table {} ({})"
         column_definitions = []
         for col in table.columns:
             column_definitions.append(f"['{col.name}']:{col.dtype}")
 
-        command = command_format.format(table.name, ",".join(column_definitions))
+        return command_format.format(table.name, ",".join(column_definitions))
 
-        client.execute(database_name, command)
+    def create_table(self, table: Table, database_name: str):
+        client = self.client_provider.get_engine_client()
+
+        client.execute(database_name, self.get_create_table_command(table))
 
     def ping(self):
         self.client_provider.get_engine_client().execute("NetDefault", ".show diagnostics")
         self.client_provider.get_dm_client().execute("NetDefault", ".show diagnostics")
 
-    def ingest_from_source(self, source: IngestionSource, mapping: IngestionMapping, target_database: str, target_table: str, **kwargs):
-        files = source.files
-        ingest_client = self.client_provider.get_ingest_client()
+    @classmethod
+    def get_ingestion_mapping(cls, data_format: str, mapping: IngestionMapping) -> List[ColumnMapping]:
         kusto_ingest_mapping = []
 
-        if source.data_format == "csv":
+        if data_format == "csv":
             # TODO: need to add __str__ to columnMapping
             mapping_func = lambda source_col, target_col: CsvColumnMapping(
                 target_col.name, target_col.data_type.value, source_col.index
             )
-        if source.data_format in ["json", "singlejson", "multijson"]:
+        if data_format in ["json", "singlejson", "multijson"]:
             # TODO: need to add __str__ to columnMapping
             mapping_func = lambda source_col, target_col: JsonColumnMapping(
                 target_col.name, f"$.{source_col.name}", cslDataType=target_col.data_type.value
@@ -158,12 +175,19 @@ class KustoBackend:
 
         for col in mapping.columns:
             kusto_ingest_mapping.append(mapping_func(col.source, col.target))
+
+        return kusto_ingest_mapping
+
+    def ingest_from_source(self, source: IngestionSource, mapping: IngestionMapping, target_database: str, target_table: str, **kwargs):
+        files = source.files
+        ingest_client = self.client_provider.get_ingest_client()
+
         # TODO: should maybe persist ingestion mappings
         ingestion_props = IngestionProperties(
             target_database,
             target_table,
             dataFormat=DataFormat(source.data_format),
-            mapping=kusto_ingest_mapping,
+            mapping=self.get_ingestion_mapping(source.data_format, mapping),
             reportLevel=ReportLevel.FailuresOnly,
             reportMethod=ReportMethod.Queue,
             flushImmediately=True

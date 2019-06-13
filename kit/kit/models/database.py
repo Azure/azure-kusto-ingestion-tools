@@ -70,11 +70,11 @@ class Table(SerializableModel):
 
         return Table(entity.name, columns)
 
-    def extend_columns(self):
-        raise NotImplementedError()
-
-    def merge_columns(self, t: Table):
-        raise NotImplementedError()
+    def extend_columns(self, columns: List[Column]):
+        for col in columns:
+            if col.name not in self.columns_lookup:
+                self.columns.append(col)
+                self.columns_lookup[col.name] = col
 
 
 @dataclass

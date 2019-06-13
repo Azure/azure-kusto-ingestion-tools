@@ -7,6 +7,7 @@ from typing import List
 from kit.models.basic import Column
 from kit.models.data_source import DataEntity
 from kit.models.database import Table
+from kit.models.serializable import SerializableModel
 
 logger = logging.getLogger(__name__)
 
@@ -18,7 +19,7 @@ class ColumnMapping:
 
 
 @dataclass
-class IngestionMapping:
+class IngestionMapping(SerializableModel):
     name: str
     columns: List[ColumnMapping]
 

@@ -30,6 +30,7 @@ setup(
         # "azure-cli",
         "typing-inspect",
         "ijson",
+        "dacite",
         "adal",
         "click",
         "maya",

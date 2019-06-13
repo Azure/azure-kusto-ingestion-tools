@@ -63,7 +63,7 @@ class FolderIngestionFlow:
             print(manifest.to_json())
         else:
             manifest_flow = ManifestIngestionFlow(
-                manifest,
+                manifest=manifest,
                 target_cluster=self.target_cluster,
                 auth=self.auth,
                 schema_conflict=self.schema_conflict,
@@ -135,7 +135,7 @@ class FilesIngestionFlow:
             print(manifest.to_json())
         else:
             manifest_flow = ManifestIngestionFlow(
-                manifest,
+                manifest=manifest,
                 target_cluster=self.target_cluster,
                 auth=self.auth,
                 schema_conflict=self.schema_conflict,
@@ -148,9 +148,12 @@ class FilesIngestionFlow:
 class ManifestIngestionFlow:
     # TODO: passing around kusto connection is annoying. should be a singleton somewhere
     def __init__(
-        self, manifest: IngestionManifest, target_cluster: str, auth: dict = None, **kwargs
+        self, target_cluster: str, manifest_path: str = None, manifest: IngestionManifest = None, auth: dict = None, **kwargs
     ):
-        self.manifest = manifest
+        if manifest_path:
+            self.manifest = IngestionManifest.load(manifest_path)
+        else:
+            self.manifest = manifest
         self.auth = auth
         self.kusto_backend = KustoBackend(target_cluster, auth)
         self.target_cluster = target_cluster

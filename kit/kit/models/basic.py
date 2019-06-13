@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Optional
 
 from kit.dtypes import KustoType
 from kit.models.serializable import SerializableModel
@@ -9,8 +10,8 @@ from kit.models.serializable import SerializableModel
 @dataclass
 class Column(SerializableModel):
     dtype: str = KustoType.STRING.value
-    name: str = None
-    index: int = None
+    name: Optional[str] = None
+    index: Optional[int] = None
 
     def __init__(self, name: str = None, dtype: str = None, index: int = None, data_type: KustoType = None):
         self.name = name

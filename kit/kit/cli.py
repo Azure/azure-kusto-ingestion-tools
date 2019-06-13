@@ -2,7 +2,8 @@ import logging
 
 import click
 
-from kit.core.ingestion import FilesIngestionFlow
+from kit.core.ingestion import FilesIngestionFlow, ManifestIngestionFlow
+from kit.models.ingestion import IngestionManifest
 
 logging.basicConfig(format="%(asctime)s | %(levelname)s | %(filename)s | %(message)s", level=logging.ERROR)
 
@@ -35,6 +36,7 @@ def main(ctx):
 @click.option("--nowait", is_flag=True, default=False)
 @click.option("--direct", is_flag=True, default=False)
 @click.option("--host", "-h", type=str)
+@click.option("--manifest", "-m", type=str)
 @click.option("--files", "-f", type=str)
 @click.option("--directory", "-d", type=click.Path())
 @click.option("--table", "-t", type=str)
@@ -44,7 +46,7 @@ def main(ctx):
 @click.option("--dry", is_flag=True, default=False)
 @click.option("--headers", is_flag=True, default=False)
 @click.pass_context
-def ingest(ctx, headers, dry, object_depth, pattern, database, table, directory, files, host, direct, nowait, app, user):
+def ingest(ctx, headers, dry, object_depth, pattern, database, table, directory, files, manifest, host, direct, nowait, app, user):
     from kit.core.ingestion import FolderIngestionFlow
 
     if directory:
@@ -59,6 +61,32 @@ def ingest(ctx, headers, dry, object_depth, pattern, database, table, directory,
             object_depth=object_depth, dry=dry
         )
         flow.run()
+    elif manifest:
+
+        flow = ManifestIngestionFlow(
+            manifest_path=manifest,
+            target_cluster=host,
+            auth=auth_from_cli(app, user, host),
+            direct=direct,
+            no_wait=nowait
+        )
+
+        flow.run()
+
+
+@main.command()
+@click.option("--manifest", "-m", type=str)
+@click.pass_context
+def kql(ctx, manifest):
+    manifest = IngestionManifest.load(manifest)
+    from kit.specifications import kql
+    table_create_commands, mapping_create_commands = kql.from_manifest(manifest)
+
+    print('// Table Creation Commands:')
+    print('\n'.join(table_create_commands))
+    print('')
+    print('// Ingestion Mapping Creation Commands:')
+    print('\n'.join(mapping_create_commands))
 
 
 @main.command()

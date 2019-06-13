@@ -31,14 +31,14 @@ class DataFile:
             with open(path, encoding=encoding) as f:
                 columns = columns_from_csv_stream(f, includes_headers=headers, limit=limit)
 
-            return DataFile(path, columns, suffix)
+            return DataFile(str(path.absolute()), columns, suffix)
 
         if suffix == 'json':
             object_depth = kwargs.get('object_depth', 1)
             with open(path, encoding=encoding) as f:
                 columns, multi_line = columns_from_json_stream(f, limit=limit, object_depth=object_depth)
 
-            return DataFile(path, columns, suffix if not multi_line else 'multijson')
+            return DataFile(str(path.absolute()), columns, suffix if not multi_line else 'multijson')
 
         raise NotImplementedError(f"{suffix} is not supported yet")
 

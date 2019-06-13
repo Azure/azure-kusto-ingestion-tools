@@ -88,7 +88,7 @@ class IngestionManifest(SerializableModel):
 
             ingestion_sources = [
                 IngestionSource(
-                    files=[str(f) for f in s_files],
+                    files=s_files,
                     mapping=s_mapping,
                     data_format=s_mapping.split("_")[-1]
                 ) for s_mapping, s_files in sources.items()
