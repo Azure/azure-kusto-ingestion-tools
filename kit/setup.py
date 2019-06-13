@@ -23,8 +23,8 @@ setup(
         kit=kit.cli:main
     """,
     install_requires=[
-        "azure-kusto-ingest>=0.0.30",
-        "azure-kusto-data>=0.0.30",
+        "azure-kusto-ingest>=0.0.31",
+        "azure-kusto-data>=0.0.31",
         "azure-storage",
         # TODO: this should be optional, because it is just an attempt to save effort and installation takes a while
         # "azure-cli",

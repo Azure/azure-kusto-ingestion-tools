@@ -1,6 +1,7 @@
 import logging
-from urllib.parse import urlparse
 from typing import List
+from urllib.parse import urlparse
+
 from azure.kusto.data.exceptions import KustoServiceError
 from azure.kusto.data.request import KustoClient, KustoConnectionStringBuilder
 from azure.kusto.ingest import (
@@ -8,10 +9,9 @@ from azure.kusto.ingest import (
     KustoIngestClient,
     CsvColumnMapping,
     JsonColumnMapping,
-    DataFormat,
     ReportMethod,
     ReportLevel,
-)
+    DataFormat)
 
 from kit.dtypes import dotnet_to_kusto_type
 from kit.enums import SchemaConflictMode
@@ -24,21 +24,6 @@ logger = logging.getLogger("kit")
 
 LIST_COLUMNS_BY_TABLE = ".show database {database_name} schema | where TableName != '' and ColumnName != '' | summarize Columns=make_set(strcat(ColumnName,':',ColumnType)) by TableName"
 CREATE_INGESTION_MAPPING = """.create table {table} ingestion {mapping_type} "{mapping_name}" '[{mappings}]'"""
-
-_mapping_defs = {
-    "csv": {
-        "name": "csv mapping",
-        "mappingRefKey": "csvMappingReference",
-        "column": {"target_column_key": "Name", "data_type_key": "DataType", "path_key": "Ordinal"},
-        "formats": ["csv", "tsv"],
-    },
-    "json": {
-        "name": "json mapping",
-        "mappingRefKey": "jsonMappingReference",
-        "column": {"target_column_key": "Column", "data_type_key": "DataType", "path_key": "Path"},
-        "format": ["json"],
-    },
-}
 
 
 class KustoClientProvider:
@@ -165,7 +150,7 @@ class KustoBackend:
             mapping_func = lambda source_col, target_col: CsvColumnMapping(
                 target_col.name, target_col.data_type.value, source_col.index
             )
-        if source.data_format == "json":
+        if source.data_format in ["json", "singlejson", "multijson"]:
             # TODO: need to add __str__ to columnMapping
             mapping_func = lambda source_col, target_col: JsonColumnMapping(
                 target_col.name, f"$.{source_col.name}", cslDataType=target_col.data_type.value
@@ -181,19 +166,20 @@ class KustoBackend:
             mapping=kusto_ingest_mapping,
             reportLevel=ReportLevel.FailuresOnly,
             reportMethod=ReportMethod.Queue,
+            flushImmediately=True
         )
 
         if "batch_id" in kwargs and not kwargs.get("no_wait", False):
             # this helps with monitoring
             ingestion_props.ingest_by_tags = [kwargs["batch_id"]]
         for file_path in files:
-            if kwargs.get("queued", True):
-                logger.info(f'Queueing "{file_path}" to ingest into "{ingestion_props.table}"')
-                ingest_client.ingest_from_file(str(file_path), ingestion_props)
-            else:
-                # TODO: allow for inline ingestion (this is currently only relevant to files already in storage)
+            if kwargs.get("direct", True):
+                # TODO: allow for direct ingestion (this is currently only relevant to files already in storage)
                 # client.execute(f'.ingest into table {operation.target} ({}) with ({mapping_ref_key}="{mapping_name}")')
                 pass
+            else:
+                logger.info(f'Queueing "{file_path}" to ingest into "{ingestion_props.table}"')
+                ingest_client.ingest_from_file(str(file_path), ingestion_props)
 
     def count_rows(self, database: str, table: str) -> int:
         client = self.client_provider.get_engine_client()

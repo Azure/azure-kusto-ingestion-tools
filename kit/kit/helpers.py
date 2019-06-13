@@ -1,13 +1,28 @@
+import builtins
 import datetime
-import re
 import logging
+import re
+
 from math import log2
 
 first_cap_re = re.compile("(.)([A-Z][a-z]+)")
 all_cap_re = re.compile("([a-z0-9])([A-Z])")
 
-
 logger = logging.getLogger(__name__)
+
+reserved_keywords = set(dir(builtins))
+
+
+def to_python_name(prop_name):
+    prop_name = to_snake_case(prop_name)
+
+    prop_name = prop_name.replace("$", "_").replace("@", "_")
+
+    if prop_name in reserved_keywords:
+        prop_name = "_" + prop_name
+
+    return prop_name
+
 
 def parse_type(string: str) -> type:
     if string == "str":

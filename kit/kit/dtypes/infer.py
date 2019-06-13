@@ -1,7 +1,6 @@
 import csv
 import io
-import json
-from typing import List
+from typing import List, Dict, Tuple
 
 from pyarrow import csv as arrow_csv
 
@@ -11,12 +10,19 @@ from kit.models.database import Column
 
 
 class ObservedColumn:
-    def __init__(self, index):
+    def __init__(self, index=None, name=None):
         self.index = index
+        self.name = name
         self.observed_types = []
 
     def observe(self, value):
-        self.observed_types.append(KustoTypeResolver.from_string(value))
+        if type(value) is str:
+            self.observed_types.append(KustoTypeResolver.from_string(value))
+        else:
+            self.observed_types.append(KustoTypeResolver.from_python_type(value))
+
+    def __repr__(self):
+        return f"ObservedColumn(index={self.index},name='{self.name}')"
 
 
 def materialize_columns(observed_columns) -> List[Column]:
@@ -24,6 +30,7 @@ def materialize_columns(observed_columns) -> List[Column]:
     for observed_col in observed_columns:
         # TODO: should handle json files properly as well
         # TODO: column names should be grabbed from file if has headers
+        seen_dynamic = False
         seen_number = False
         seen_decimal = False
         seen_long = False
@@ -43,12 +50,16 @@ def materialize_columns(observed_columns) -> List[Column]:
                 seen_date = True
             elif t is KustoType.STRING:
                 seen_string = True
+            elif t is KustoType.DYNAMIC:
+                seen_dynamic = True
 
-        if not seen_number and not seen_date and not seen_string and seen_bool:
+        if not any([seen_number, seen_date, seen_string, seen_dynamic]) and seen_bool:
             data_type = KustoType.BOOL
-        elif not seen_number and seen_date and not seen_string and not seen_bool:
+        elif not any([seen_number, seen_bool, seen_string, seen_dynamic]) and seen_date:
             data_type = KustoType.DATETIME
-        elif seen_number and not seen_date and not seen_bool and not seen_string:
+        elif not any([seen_number, seen_bool, seen_string, seen_date]) and seen_dynamic:
+            data_type = KustoType.DYNAMIC
+        elif not any([seen_dynamic, seen_bool, seen_string, seen_date]) and seen_number:
             if seen_decimal or (seen_long and seen_float):
                 data_type = KustoType.DECIMAL
             elif seen_float:
@@ -60,82 +71,101 @@ def materialize_columns(observed_columns) -> List[Column]:
         else:
             data_type = KustoType.STRING
 
-        columns.append(Column(data_type=data_type, index=observed_col.index))
+        columns.append(Column(data_type=data_type, index=observed_col.index, name=observed_col.name))
 
     return columns
 
 
-def observe_columns(stream, file_format="csv", limit=200, **kwargs) -> List[Column]:
-    columns = []
-    if file_format == "csv":
-        includes_headers = kwargs.get("headers", False)
-        if isinstance(stream, io.BytesIO):
-            table = arrow_csv.read_csv(stream)
+def observe_columns_in_object(obj, observed_columns_map: Dict[str, ObservedColumn] = None):
+    observed_columns_map = observed_columns_map or {}
 
-            for index, field in enumerate(table.schema):
-                kusto_type = KustoTypeResolver.from_arrow_type(field.type)
-                columns.append(Column(index, name=field.name.strip(), data_type=kusto_type.value))
-        elif isinstance(stream, io.StringIO):
-            reader = csv.reader(stream)
-            observed_columns = None
-            for i, line in enumerate(reader):
-                # limit row scan
-                if i == limit:
+    for key, value in obj.items():
+        if key not in observed_columns_map:
+            observed_columns_map[key] = ObservedColumn(name=key)
+
+        observed_columns_map[key].observe(value)
+
+    return observed_columns_map
+
+
+def columns_from_json_stream(stream, limit=200, **kwargs) -> Tuple[List[Column], bool]:
+    import ijson.backends.python as ijson
+    import json
+
+    observed_columns_map = None
+    counter = 0
+
+    first_char = stream.read(1)
+    file_starts_at = 0
+    while not first_char:
+        file_starts_at += 1
+        first_char = stream.read(1)
+
+    stream.seek(file_starts_at, 0)
+    multi_line = False
+    if first_char == '[':
+        # TODO: assuming data is an array ('[{...},{...},...,{}]')
+        multi_line = True
+        for item in ijson.items(stream, 'item'):
+            if limit is not None and counter >= limit:
+                break
+
+            observed_columns_map = observe_columns_in_object(item, observed_columns_map)
+            counter += 1
+
+    else:
+        line = stream.readline()
+        while line and counter <= limit:
+            try:
+                item = json.loads(line)
+                observed_columns_map = observe_columns_in_object(item, observed_columns_map)
+
+                counter += 1
+
+                if counter >= limit:
                     break
 
-                if observed_columns is None:
-                    observed_columns = [ObservedColumn(i) for i in range(len(line))]
+                line = stream.readline()
+            except:
+                multi_line = True
+                line += stream.readline()
 
-                if i == 0 and includes_headers:
-                    first_line = line
-                    continue
+    observed_columns = list(observed_columns_map.values())
 
-                for col, value in enumerate(line):
-                    observed_columns[col].observe(value)
-
-            columns = materialize_columns(observed_columns)
-
-    elif file_format == "json":
-        json_object = json.load(stream)
-
-    return columns
+    return materialize_columns(observed_columns), multi_line
 
 
-def columns_from_stream(stream, file_format="csv", includes_headers=False, limit=200) -> List[Column]:
+def columns_from_csv_stream(stream, includes_headers=False, limit=200) -> List[Column]:
     columns = []
     first_line = None
-    if file_format == "csv":
-        if isinstance(stream, io.BytesIO):
-            table = arrow_csv.read_csv(stream)
 
-            for index, field in enumerate(table.schema):
-                kusto_type = KustoTypeResolver.from_arrow_type(field.type)
-                columns.append(Column(name=field.name.strip(), index=index, data_type=kusto_type))
-        elif isinstance(stream, (io.StringIO, io.TextIOWrapper)):
-            reader = csv.reader(stream)
-            observed_columns = None
-            for i, line in enumerate(reader):
-                # limit row scan
-                if i == limit:
-                    break
+    if isinstance(stream, io.BytesIO):
+        table = arrow_csv.read_csv(stream)
 
-                if observed_columns is None:
-                    observed_columns = [ObservedColumn(i) for i in range(len(line))]
+        for index, field in enumerate(table.schema):
+            kusto_type = KustoTypeResolver.from_arrow_type(field.type)
+            columns.append(Column(name=field.name.strip(), index=index, data_type=kusto_type))
+    elif isinstance(stream, (io.StringIO, io.TextIOWrapper)):
+        reader = csv.reader(stream)
+        observed_columns = None
+        for i, line in enumerate(reader):
+            # limit row scan
+            if i == limit:
+                break
 
-                if i == 0 and includes_headers:
-                    first_line = line
-                    continue
+            if i == 0 and includes_headers:
+                first_line = line
+                continue
 
-                for col, value in enumerate(line):
-                    observed_columns[col].observe(value)
+            if observed_columns is None:
+                observed_columns = [
+                    ObservedColumn(i, name=first_line[i] if first_line is not None else None)
+                    for i in range(len(line))
+                ]
 
-            columns = materialize_columns(observed_columns)
+            for col, value in enumerate(line):
+                observed_columns[col].observe(value)
 
-        if includes_headers and first_line:
-            for index, col in enumerate(columns):
-                col.name = first_line[index]
-
-    elif file_format == "json":
-        json_object = json.load(stream)
+        columns = materialize_columns(observed_columns)
 
     return columns

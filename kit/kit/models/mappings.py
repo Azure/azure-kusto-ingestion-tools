@@ -27,24 +27,27 @@ class IngestionMapping:
         data_format = source.files[0].data_format
         name = source.name + "_from_" + data_format
 
-        columns = []
+        column_mappings = []
+        index_based = not any((c for c in source.columns if c.name is not None))
 
-        if data_format == 'csv':
-            index_based = False
-            for index, source_col in enumerate(source.columns):
-                # if no name was given, wee fallback to using indices
-                if source_col.name is None:
-                    index_based = True
-                    # TODO: should probably notify if types mistmatch (might mean mis-configured)
-                    if index + 1 > len(table.columns):
-                        raise RuntimeError(f"Target table '{table.name}' has fewer columns than source {source.name}. Failed index {index}")
-                    columns.append(ColumnMapping(source_col, table.columns[index]))
+        if index_based and len(source.columns) != len(table.columns):
+            logger.warning(f"Mapping for '{source.name}' used index based mapping, and column count doesn't match target table '{table.name}'. "
+                           f"{len(source.columns)} != {len(table.columns)}")
 
-            if index_based and len(source.columns) != len(table.columns):
-                logger.warning(f"Mapping for '{source.name}'' used index based mapping, and column count doesn't match target table '{table.name}'. "
-                               f"{len(source.columns)} != {len(table.columns)}")
+        for index, source_col in enumerate(source.columns):
+            if index_based:
+                # TODO: should probably notify if types mismatch (might mean mis-configured)
+                if index + 1 > len(table.columns):
+                    raise RuntimeError(f"Target table '{table.name}' has fewer columns than source {source.name}. Failed index {index}")
 
-        else:
-            raise NotImplementedError('Currently only supporting csv')
+                target_col = table.columns[index]
+            else:
+                expected_target_col_name = Table.valid_column_name(source_col.name)
+                if expected_target_col_name not in table.columns_lookup:
+                    raise RuntimeError(
+                        f"Target table '{table.name}' is missing a column {expected_target_col_name} ({source_col.name}) from source {source.name}. Failed index {index}")
 
-        return IngestionMapping(name, columns)
+                target_col = table.columns_lookup[expected_target_col_name]
+            column_mappings.append(ColumnMapping(source_col, target_col))
+
+        return IngestionMapping(name, column_mappings)

@@ -25,7 +25,7 @@ class FolderIngestionFlow:
         self.data_conflict = kwargs.get("data_conflict_mode", DataConflictMode.Safe)
         self.schema_conflict = kwargs.get("data_conflict_mode", SchemaConflictMode.Append)
         self.no_wait = kwargs.get("no_wait", False)
-        self.queued = kwargs.get("queued", False)
+        self.direct = kwargs.get("direct", False)
         self.pattern = kwargs.get("pattern", None)
         self.headers = kwargs.get("headers", False)
 
@@ -61,7 +61,7 @@ class FolderIngestionFlow:
             target_cluster=self.target_cluster,
             auth=self.auth,
             schema_conflict=self.schema_conflict,
-            queued=self.queued,
+            direct=self.direct,
             no_wait=self.no_wait,
         )
 
@@ -79,17 +79,23 @@ class FilesIngestionFlow:
         self.data_conflict = kwargs.get("data_conflict_mode", DataConflictMode.Safe)
         self.schema_conflict = kwargs.get("data_conflict_mode", SchemaConflictMode.Append)
         self.no_wait = kwargs.get("no_wait", False)
-        self.queued = kwargs.get("queued", False)
+        self.direct = kwargs.get("direct", False)
         self.headers = kwargs.get("headers", False)
 
     def ensure_folder(self):
         total = 0
+
+        if len(self.files) == 0:
+            raise ValueError("No files found")
 
         logger.info(f'Got {len(self.files)} files : ')
         for index, file in enumerate(sorted(self.files)):
             file_size = os.stat(file).st_size
             total += file_size
             logger.info(f"  [{index + 1}/{len(self.files)}] {file} {human_readable(file_size)}")
+
+        if total == 0:
+            raise ValueError("All files are empty")
 
         logger.info(f'Total size {human_readable(total)}')
 
@@ -122,7 +128,7 @@ class FilesIngestionFlow:
             target_cluster=self.target_cluster,
             auth=self.auth,
             schema_conflict=self.schema_conflict,
-            queued=self.queued,
+            direct=self.direct,
             no_wait=self.no_wait,
         )
 
@@ -139,7 +145,7 @@ class ManifestIngestionFlow:
         self.kusto_backend = KustoBackend(target_cluster, auth)
         self.target_cluster = target_cluster
         self.schema_conflict = kwargs.get("schema_conflict", SchemaConflictMode.Append)
-        self.queued = kwargs.get("queued", False)
+        self.direct = kwargs.get("direct", False)
         self.no_wait = kwargs.get("no_wait", False)
 
     # TODO: perhapses logic should be abstracted away to a database object
@@ -186,7 +192,7 @@ class ManifestIngestionFlow:
                     mapping,
                     target_database=operation.database,
                     target_table=operation.target,
-                    queued=self.queued,
+                    direct=self.direct,
                     batch_id=batch_id,
                     no_wait=self.no_wait,
                 )

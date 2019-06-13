@@ -36,6 +36,6 @@ def table_from_blob(blob_uri, name=None, **kwargs) -> Table:
     else:
         buffered_stream = output_stream
 
-    columns = infer.columns_from_stream(buffered_stream, includes_headers=kwargs.get("includes_headers", False))
+    columns = infer.columns_from_csv_stream(buffered_stream, includes_headers=kwargs.get("includes_headers", False))
 
     return Table(name or blob_path, columns)

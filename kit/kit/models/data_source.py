@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import List
 
-from kit.dtypes.infer import columns_from_stream
+from kit.dtypes.infer import columns_from_csv_stream, columns_from_json_stream
 from kit.enums import DataConflictMode
 from kit.exceptions import DataConflictError
 from kit.models.basic import Column
@@ -19,13 +19,27 @@ class DataFile:
     data_format: str = "csv"
 
     @classmethod
-    def from_file(cls, path, **kwargs) -> DataFile:
-        ext = os.path.splitext(path)[-1][1:]
-        headers = kwargs.get('headers', False)
-        with open(path, encoding='utf8') as f:
-            columns = columns_from_stream(f, includes_headers=headers)
+    def from_file(cls, file_path, **kwargs) -> DataFile:
+        path = Path(file_path)
+        limit = kwargs.get('limit', 200)
+        suffix = path.suffix[1:]
 
-        return DataFile(path, columns, ext)
+        encoding = kwargs.get('encoding', 'utf8')
+        if suffix == 'csv':
+            headers = kwargs.get('headers', False)
+
+            with open(path, encoding=encoding) as f:
+                columns = columns_from_csv_stream(f, includes_headers=headers, limit=limit)
+
+            return DataFile(path, columns, suffix)
+
+        if suffix == 'json':
+            with open(path, encoding=encoding) as f:
+                columns, multi_line = columns_from_json_stream(f, limit=limit)
+
+            return DataFile(path, columns, suffix if not multi_line else 'multijson')
+
+        raise NotImplementedError(f"{suffix} is not supported yet")
 
 
 @dataclass
@@ -101,7 +115,7 @@ class DataSource:
             for entity_path in entity_paths:
                 entity_path = Path(os.path.join(path, entity_path))
                 if entity_path.is_file():
-                    if entity_path.match(pattern):
+                    if not pattern or entity_path.match(pattern):
                         entities.append(DataEntity.from_path(entity_path, conflict_mode=conflict_mode, headers=headers))
                 else:
                     entities.append(DataEntity.from_path(entity_path, conflict_mode=conflict_mode, pattern=pattern, headers=headers))

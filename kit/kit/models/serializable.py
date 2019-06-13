@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import builtins
 import json
 from dataclasses import dataclass, asdict
 from datetime import datetime
@@ -12,24 +11,15 @@ from typing import List, Dict
 import maya
 from typing_inspect import is_generic_type, get_args
 
-from kit.helpers import to_snake_case
-
-reserved_keywords = set(dir(builtins))
-
-
-def to_python_name(prop_name):
-    prop_name = to_snake_case(prop_name)
-
-    prop_name = prop_name.replace("$", "_")
-
-    if prop_name in reserved_keywords:
-        prop_name = "_" + prop_name
-
-    return prop_name
+from kit.helpers import to_python_name
 
 
 @dataclass
 class SerializableModel:
+    @classmethod
+    def copy(cls, other):
+        return cls.fromdict(asdict(other))
+
     @classmethod
     def load(cls, file):
         with open(file, 'r') as f:
@@ -48,7 +38,7 @@ class SerializableModel:
         from kit.models.data_source import DataSource, DataEntity, DataFile
         from kit.models.ingestion import IngestionManifest, IngestionSource, IngestionMapping, IngestionOp
 
-        known = [Column, Database, Table, DataSource, DataEntity, DataFile, IngestionMapping, IngestionOp, IngestionSource, IngestionManifest]
+        known = {Column, Database, Table, DataSource, DataEntity, DataFile, IngestionMapping, IngestionOp, IngestionSource, IngestionManifest}
         ctor_params = {}
         for field in cls.__dataclass_fields__.values():
             if d.get(field.name) is not None:
@@ -65,8 +55,10 @@ class SerializableModel:
                         ctor_params[field.name] = [T_of.fromdict(nested_dict) for nested_dict in d[field.name]]
                     else:
                         ctor_params[field.name] = d[field.name]
+                elif issubclass(T, SerializableModel):
+                    ctor_params[field.name] = T_of.fromdict(d[field.name])
                 else:
-                    raise ValueError(f"Unexpected field type {T}")
+                    ctor_params[field.name] = d[field.name]
 
         return cls(**ctor_params)
 

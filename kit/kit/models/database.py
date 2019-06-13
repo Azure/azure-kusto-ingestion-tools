@@ -5,11 +5,14 @@ from typing import List, Dict
 
 from kit.dtypes import cdm_type_to_kusto
 from kit.exceptions import SchemaConflictError
+
 from kit.models import cdm
 from kit.models.basic import Column
 from kit.models.data_source import DataSource, DataEntity
 from kit.models.serializable import SerializableModel
+import re
 
+_column_regex = re.compile('[^0-9a-zA-Z_.-]+')
 
 @dataclass
 class Table(SerializableModel):
@@ -26,6 +29,17 @@ class Table(SerializableModel):
 
         return True
 
+    def __post_init__(self):
+        for col in self.columns:
+            if col.name is not None:
+                col.name = self.valid_column_name(col.name)
+
+        self.columns_lookup = {col.name: col for col in self.columns}
+
+    @classmethod
+    def valid_column_name(cls, column_name):
+        return _column_regex.sub('', column_name)
+
     def assert_eq(self, other: Table):
         if len(self.columns) != len(other.columns):
             raise SchemaConflictError(
@@ -40,7 +54,8 @@ class Table(SerializableModel):
 
     @staticmethod
     def from_entity(entity: DataEntity):
-        return Table(entity.name, entity.columns)
+        # copying array to detach reference
+        return Table(entity.name, [Column.copy(c) for c in entity.columns])
 
     @staticmethod
     def from_cdm_entity(entity: cdm.LocalEntity, **kwargs) -> Table:

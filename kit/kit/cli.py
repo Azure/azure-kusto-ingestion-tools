@@ -33,7 +33,7 @@ def main(ctx):
 @click.option("--user", type=str)
 @click.option("--app", type=str)
 @click.option("--nowait", is_flag=True, default=False)
-@click.option("--queued", "-q", is_flag=True, default=False)
+@click.option("--direct", is_flag=True, default=False)
 @click.option("--host", "-h", type=str)
 @click.option("--files", "-f", type=str)
 @click.option("--directory", "-d", type=click.Path())
@@ -42,17 +42,17 @@ def main(ctx):
 @click.option("--pattern", type=str)
 @click.option("--headers", is_flag=True, default=False)
 @click.pass_context
-def ingest(ctx, headers, pattern, database, table, directory, files, host, queued, nowait, app, user):
+def ingest(ctx, headers, pattern, database, table, directory, files, host, direct, nowait, app, user):
     from kit.core.ingestion import FolderIngestionFlow
 
     if directory:
         flow = FolderIngestionFlow(
-            directory, host, database, auth=auth_from_cli(app, user, host), queued=queued, no_wait=nowait, pattern=pattern, headers=headers
+            directory, host, database, auth=auth_from_cli(app, user, host), direct=direct, no_wait=nowait, pattern=pattern, headers=headers
         )
         flow.run()
     elif files:
         flow = FilesIngestionFlow(
-            files.split(','), host, database, target_table=table, auth=auth_from_cli(app, user, host), queued=queued, no_wait=nowait, headers=headers
+            files.split(','), host, database, target_table=table, auth=auth_from_cli(app, user, host), direct=direct, no_wait=nowait, headers=headers
         )
         flow.run()
 

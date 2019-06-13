@@ -31,8 +31,8 @@ class IngestionOp(SerializableModel):
 
 
 @dataclass
-class IngestionManifest:
-    # This holds a snapshop of the database relevant for ingestion. should be matched with actual database per-ingestion.
+class IngestionManifest(SerializableModel):
+    # This holds a snapshot of the database relevant for ingestion. should be matched with actual database per-ingestion.
     databases: List[Database]
     mappings: List[IngestionMapping]
     operations: List[IngestionOp]
@@ -61,10 +61,9 @@ class IngestionManifest:
 
     @classmethod
     def from_entities_and_database(cls, entities: List[DataEntity], target_database: Database,
-                                 conflict_mode: SchemaConflictMode = SchemaConflictMode.Append) -> IngestionManifest:
+                                   conflict_mode: SchemaConflictMode = SchemaConflictMode.Append) -> IngestionManifest:
         operations = []
         mappings: Dict[str, IngestionMapping] = {}
-
 
         for entity in entities:
             sources: Dict[str, List[str]] = defaultdict(list)
@@ -111,7 +110,6 @@ class IngestionManifest:
                     raise SchemaConflictError(f"SAFE MODE: Table '{source.name}' appears in source but no in target database '{target_database.name}'")
 
                 logger.info(f"Source has a table '{entity.name}' which target database '{target_database.name}' is missing. will create it.")
-
 
                 target_table = source_schema.tables_dict[entity.name]
                 # TODO: not sure I want to add it to manifest, maybe it should be clear that ehter is a target table that doesn't exist.

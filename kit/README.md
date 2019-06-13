@@ -159,7 +159,7 @@ A file to describe the details of an ingestion which can be run later
   
 ##  Examples
   
-### Example 1 : Ingest CSV Dataset (Join Order Benchmark)  
+### Example 1 : Ingest IMDB Dataset , CSV files (used in Join Order Benchmark)  
   
 One useful scenario would be to load an entire existing dataset into Kusto.  
 Let's take for example the [Join Order Benchmark](https://github.com/gregrahn/join-order-benchmark) used in the paper [How good are query optimizers really?](http://www.vldb.org/pvldb/vol9/p204-leis.pdf).  
@@ -222,7 +222,7 @@ And take a peek at the data:
 `kit peek --table aka_name -n 10 -h dadubovs1.westus -db imdb`
 
   
-### Example 2 : Ingest CSV ML Tables
+### Example 2 : Ingest Kaggle ML Datasets, CSV and JSON
 
 Kaggale has tons of interesting dataset for ML/AI purposes.
 
@@ -235,11 +235,13 @@ Uploaded to our azure storage for convenience:
 
 `wget https://imdb2013dataset.blob.core.windows.net/data/creditcard.csv.gz --no-check-certificate`  
 `wget https://imdb2013dataset.blob.core.windows.net/data/globalterrorism.csv.gz --no-check-certificate`
+`wget https://imdb2013dataset.blob.core.windows.net/data/arxivData.csv.gz --no-check-certificate`
   or   
-`curl https://imdb2013dataset.blob.core.windows.net/data/creditcard.csv.gz --output creditcard.csv.tgz`
-`curl https://imdb2013dataset.blob.core.windows.net/data/globalterrorism.csv.gz --output globalterrorism.csv.tgz`   
+`curl https://imdb2013dataset.blob.core.windows.net/data/creditcard.csv.gz --output creditcard.csv.gz`
+`curl https://imdb2013dataset.blob.core.windows.net/data/globalterrorism.csv.gz --output globalterrorism.csv.gz`   
+`curl https://imdb2013dataset.blob.core.windows.net/data/arxivData.json.gz --output arxivData.json.gz`
  
  Once downloaded and unzipped, same idea, only this time files contain headers, so schema is infered:
 
-`ingest -d . --pattern *.csv -h dadubovs1.westus -db ml -q --headers`
+`ingest -d . -h dadubovs1.westus -db ml --headers`
 
