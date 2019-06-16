@@ -1,6 +1,12 @@
 
 # Kusto Ingestion Tools (Kit)  
-  
+
+
+[*azure-kusto-ingestion-tools*]("https://github.com/Azure/azure-kusto-ingestion-tools/tree/master/kit")  a simple toolkit to help with ingestions, avialble here
+<br>
+[![PyPI version](https://badge.fury.io/py/azure-kusto-ingestion-tools.svg)](https://badge.fury.io/py/azure-kusto-ingestion-tools)
+[![Downloads](https://pepy.tech/badge/azure-kusto-ingestion-tools)](https://pepy.tech/project/azure-kusto-ingestion-tools)<br>
+
 ## Purpose  
 Make ingestion simpler (*at least for common cases*).
 After creating an ADX (Kusto) cluster via Azure portal, we want to explore / visualize some data. 
@@ -15,6 +21,7 @@ It contains features to support:
 
 ## TOC
 * [Concept](#concept)  
+* [Install](#install)
 * [Usage](#usage)
 * [Examples](#examples)
 
@@ -27,8 +34,23 @@ Given a data source, usually the workflow would consist of:
 4. Loading the data  
 5. *Optional* : Automation / Moving to Production  
   
+## Install
+
+### Minimum Requirements
+* Python 3.7+
+* See setup.py for dependencies
+
+### Pip
+
+To install via the Python Package Index (PyPI), type:
+
+`pip install azure-kusto-ingestion-tools`
+
+This will expose a new cli commands : `kit --help`
+
+
 ## Usage  
-  
+
 ### Basic  
   
 `kit ingest -d /path/to/data/imdb -h mycluster.westus`  
