@@ -21,24 +21,24 @@ class DataFile:
     @classmethod
     def from_file(cls, file_path, **kwargs) -> DataFile:
         path = Path(file_path)
-        limit = kwargs.get('limit', 200)
+        limit = kwargs.get("limit", 200)
         suffix = path.suffix[1:]
 
-        encoding = kwargs.get('encoding', 'utf8')
-        if suffix == 'csv':
-            headers = kwargs.get('headers', False)
+        encoding = kwargs.get("encoding", "utf8")
+        if suffix == "csv":
+            headers = kwargs.get("headers", False)
 
             with open(path, encoding=encoding) as f:
                 columns = columns_from_csv_stream(f, includes_headers=headers, limit=limit)
 
             return DataFile(str(path.absolute()), columns, suffix)
 
-        if suffix == 'json':
-            object_depth = kwargs.get('object_depth', 1)
+        if suffix == "json":
+            object_depth = kwargs.get("object_depth", 1)
             with open(path, encoding=encoding) as f:
                 columns, multi_line = columns_from_json_stream(f, limit=limit, object_depth=object_depth)
 
-            return DataFile(str(path.absolute()), columns, suffix if not multi_line else 'multijson')
+            return DataFile(str(path.absolute()), columns, suffix if not multi_line else "multijson")
 
         raise NotImplementedError(f"{suffix} is not supported yet")
 
@@ -73,9 +73,7 @@ class DataEntity:
                         columns = df.columns
                     else:
                         if len(columns) != len(df.columns):
-                            raise DataConflictError(
-                                f"Column count mismatch for {name}: self has {len(columns)} but {df.path} has {len(df.columns)}"
-                            )
+                            raise DataConflictError(f"Column count mismatch for {name}: self has {len(columns)} but {df.path} has {len(df.columns)}")
 
                         for i in range(len(columns)):
                             if columns[i].data_type != df.columns[i].data_type:

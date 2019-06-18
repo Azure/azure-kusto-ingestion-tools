@@ -32,8 +32,10 @@ class IngestionMapping(SerializableModel):
         index_based = not any((c for c in source.columns if c.name is not None))
 
         if index_based and len(source.columns) != len(table.columns):
-            logger.warning(f"Mapping for '{source.name}' used index based mapping, and column count doesn't match target table '{table.name}'. "
-                           f"{len(source.columns)} != {len(table.columns)}")
+            logger.warning(
+                f"Mapping for '{source.name}' used index based mapping, and column count doesn't match target table '{table.name}'. "
+                f"{len(source.columns)} != {len(table.columns)}"
+            )
 
         for index, source_col in enumerate(source.columns):
             if index_based:
@@ -46,7 +48,8 @@ class IngestionMapping(SerializableModel):
                 expected_target_col_name = Table.valid_column_name(source_col.name)
                 if expected_target_col_name not in table.columns_lookup:
                     raise RuntimeError(
-                        f"Target table '{table.name}' is missing a column {expected_target_col_name} ({source_col.name}) from source {source.name}. Failed index {index}")
+                        f"Target table '{table.name}' is missing a column {expected_target_col_name} ({source_col.name}) from source {source.name}. Failed index {index}"
+                    )
 
                 target_col = table.columns_lookup[expected_target_col_name]
             column_mappings.append(ColumnMapping(source_col, target_col))

@@ -3,6 +3,7 @@ import logging
 import click
 
 from kit.core.ingestion import FilesIngestionFlow, ManifestIngestionFlow
+from kit.models.data_source import DataEntity
 from kit.models.ingestion import IngestionManifest
 
 logging.basicConfig(format="%(asctime)s | %(levelname)s | %(filename)s | %(message)s", level=logging.ERROR)
@@ -51,42 +52,62 @@ def ingest(ctx, headers, dry, object_depth, pattern, database, table, directory,
 
     if directory:
         flow = FolderIngestionFlow(
-            directory, host, database, auth=auth_from_cli(app, user, host), direct=direct, no_wait=nowait, pattern=pattern, headers=headers, dry=dry,
-            object_depth=object_depth
+            directory,
+            host,
+            database,
+            auth=auth_from_cli(app, user, host),
+            direct=direct,
+            no_wait=nowait,
+            pattern=pattern,
+            headers=headers,
+            dry=dry,
+            object_depth=object_depth,
         )
         flow.run()
     elif files:
         flow = FilesIngestionFlow(
-            files.split(','), host, database, target_table=table, auth=auth_from_cli(app, user, host), direct=direct, no_wait=nowait, headers=headers,
-            object_depth=object_depth, dry=dry
+            files.split(","),
+            host,
+            database,
+            target_table=table,
+            auth=auth_from_cli(app, user, host),
+            direct=direct,
+            no_wait=nowait,
+            headers=headers,
+            object_depth=object_depth,
+            dry=dry,
         )
         flow.run()
     elif manifest:
 
-        flow = ManifestIngestionFlow(
-            manifest_path=manifest,
-            target_cluster=host,
-            auth=auth_from_cli(app, user, host),
-            direct=direct,
-            no_wait=nowait
-        )
+        flow = ManifestIngestionFlow(manifest_path=manifest, target_cluster=host, auth=auth_from_cli(app, user, host), direct=direct, no_wait=nowait)
 
         flow.run()
 
 
 @main.command()
+@click.option("--headers", is_flag=True, default=False)
+@click.option("--object-depth", "-od", type=int, default=1)
+@click.option("--file", "-f", type=str)
 @click.option("--manifest", "-m", type=str)
 @click.pass_context
-def kql(ctx, manifest):
-    manifest = IngestionManifest.load(manifest)
+def kql(ctx, manifest, file, object_depth, headers):
+    if manifest:
+        manifest = IngestionManifest.load(manifest)
+
+    if file:
+        entity = DataEntity.from_path(file, headers=headers, object_depth=object_depth)
+        manifest = IngestionManifest.from_entities([entity])
+
     from kit.specifications import kql
+
     table_create_commands, mapping_create_commands = kql.from_manifest(manifest)
 
-    print('// Table Creation Commands:')
-    print('\n'.join(table_create_commands))
-    print('')
-    print('// Ingestion Mapping Creation Commands:')
-    print('\n'.join(mapping_create_commands))
+    print("// Table Creation Commands:")
+    print("\n".join(table_create_commands))
+    print("")
+    print("// Ingestion Mapping Creation Commands:")
+    print("\n".join(mapping_create_commands))
 
 
 @main.command()
@@ -175,6 +196,7 @@ def create(ctx, file, directory, database, host, sql, app, user):
 @click.option("--file", "-f", type=click.Path())
 def apply(ctx, file, database, host, app, user):
     from kit.models.database import Database
+
     db = Database.load(file)
     auth = auth_from_cli(app, user, host)
     from kit.backends.kusto import KustoBackend

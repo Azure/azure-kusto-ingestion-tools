@@ -51,8 +51,9 @@ class FolderIngestionFlow:
     def run(self):
         self.ensure_folder()
 
-        data_source = DataSource.from_path(self.folder, conflict_mode=self.data_conflict, pattern=self.pattern, headers=self.headers,
-                                           object_depth=self.object_depth)
+        data_source = DataSource.from_path(
+            self.folder, conflict_mode=self.data_conflict, pattern=self.pattern, headers=self.headers, object_depth=self.object_depth
+        )
         target_schema = self.kusto_backend.describe_database(self.target_db)
 
         # TODO: this is somewhat misleading (probably the hardest part here).
@@ -96,7 +97,7 @@ class FilesIngestionFlow:
         if len(self.files) == 0:
             raise ValueError("No files found")
 
-        logger.info(f'Got {len(self.files)} files : ')
+        logger.info(f"Got {len(self.files)} files : ")
         for index, file in enumerate(sorted(self.files)):
             file_size = os.stat(file).st_size
             total += file_size
@@ -105,7 +106,7 @@ class FilesIngestionFlow:
         if total == 0:
             raise ValueError("All files are empty")
 
-        logger.info(f'Total size {human_readable(total)}')
+        logger.info(f"Total size {human_readable(total)}")
 
     def run(self):
         self.ensure_folder()
@@ -147,9 +148,7 @@ class FilesIngestionFlow:
 
 class ManifestIngestionFlow:
     # TODO: passing around kusto connection is annoying. should be a singleton somewhere
-    def __init__(
-        self, target_cluster: str, manifest_path: str = None, manifest: IngestionManifest = None, auth: dict = None, **kwargs
-    ):
+    def __init__(self, target_cluster: str, manifest_path: str = None, manifest: IngestionManifest = None, auth: dict = None, **kwargs):
         if manifest_path:
             self.manifest = IngestionManifest.load(manifest_path)
         else:
@@ -173,10 +172,7 @@ class ManifestIngestionFlow:
                     else:
                         target_table = target_database.tables_dict[manifest_table.name]
 
-                        if (
-                            len(manifest_table.columns) > len(target_table.columns)
-                            and self.schema_conflict == SchemaConflictMode.Safe
-                        ):
+                        if len(manifest_table.columns) > len(target_table.columns) and self.schema_conflict == SchemaConflictMode.Safe:
                             raise TableConflictError(
                                 f'SAFE_MODE: Manifest for "{manifest_table.name}" has more columns than actual table in {target_database}.'
                             )
@@ -187,9 +183,7 @@ class ManifestIngestionFlow:
                         raise DatabaseConflictError(f"Target database has a different backends then expected")
             except DatabaseDoesNotExist:
                 if self.schema_conflict == SchemaConflictMode.Safe:
-                    raise DatabaseConflictError(
-                        f'SAFE_MODE: Expected a Database named "{manifest_database.name}" on {self.target_cluster} but none found'
-                    )
+                    raise DatabaseConflictError(f'SAFE_MODE: Expected a Database named "{manifest_database.name}" on {self.target_cluster} but none found')
                 if self.schema_conflict == SchemaConflictMode.Append:
                     # by default, if we can't find a database on the cluster, we will create it
                     raise NotImplementedError()
@@ -227,9 +221,7 @@ class ManifestIngestionFlow:
                 # TODO: this method is limited. when working with multiple files, this will only now when **any** file was ingested. no way to make sure **all** were ingested.
                 # TODO: should probably iterate over databases as well
                 # TODO: should check errors on top of successful ingestions
-                count = self.kusto_backend.count_rows_with_tag(
-                    database=self.manifest.databases[0].name, table=table, tag=batch_id
-                )
+                count = self.kusto_backend.count_rows_with_tag(database=self.manifest.databases[0].name, table=table, tag=batch_id)
                 if count > 0:
                     logger.info(f"Table '{table}' has {count} rows ingested")
                     tables_done.add(table)

@@ -17,7 +17,7 @@ def table_from_path(path, name=None, conflict_mode=DataConflictMode.Safe, top=20
 def table_from_file(filepath, name=None, top=200, **kwargs) -> Table:
     path = Path(filepath)
     if not path.is_file():
-        raise ValueError('Given path is not a valid file.')
+        raise ValueError("Given path is not a valid file.")
 
     df = DataFile.from_file(filepath, **kwargs, limit=top)
 

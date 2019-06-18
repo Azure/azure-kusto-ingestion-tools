@@ -12,7 +12,8 @@ from kit.models.data_source import DataSource, DataEntity
 from kit.models.serializable import SerializableModel
 import re
 
-_column_regex = re.compile('[^0-9a-zA-Z_.-]+')
+_column_regex = re.compile("[^0-9a-zA-Z_.-]+")
+
 
 @dataclass
 class Table(SerializableModel):
@@ -38,13 +39,11 @@ class Table(SerializableModel):
 
     @classmethod
     def valid_column_name(cls, column_name):
-        return _column_regex.sub('', column_name)
+        return _column_regex.sub("", column_name)
 
     def assert_eq(self, other: Table):
         if len(self.columns) != len(other.columns):
-            raise SchemaConflictError(
-                f"Column count mismatch for {self.name}: self is {len(self.columns)} but other is {len(other.columns)}"
-            )
+            raise SchemaConflictError(f"Column count mismatch for {self.name}: self is {len(self.columns)} but other is {len(other.columns)}")
 
         for i in range(len(self.columns)):
             if self.columns[i].data_type != other.columns[i].data_type:
@@ -62,11 +61,7 @@ class Table(SerializableModel):
         columns = []
 
         for i, attr in enumerate(entity.attributes):
-            columns.append(
-                Column(
-                    index=i, data_type=cdm_type_to_kusto(entity.attributes[i].data_type), name=entity.attributes[i].name
-                )
-            )
+            columns.append(Column(index=i, data_type=cdm_type_to_kusto(entity.attributes[i].data_type), name=entity.attributes[i].name))
 
         return Table(entity.name, columns)
 
@@ -85,9 +80,7 @@ class Database(SerializableModel):
     def assert_eq(self, other: Database, allow_partial=True):
         if len(self.tables) != len(other.tables):
             if not allow_partial:
-                raise SchemaConflictError(
-                    f"Table count mismatch for {self.name}: self is {len(self.tables)} but other is {len(other.tables)}"
-                )
+                raise SchemaConflictError(f"Table count mismatch for {self.name}: self is {len(self.tables)} but other is {len(other.tables)}")
 
             self_tables = set(t.name for t in self.tables)
             other_tables = set(t.name for t in self.tables)

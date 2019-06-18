@@ -4,14 +4,7 @@ from urllib.parse import urlparse
 
 from azure.kusto.data.exceptions import KustoServiceError
 from azure.kusto.data.request import KustoClient, KustoConnectionStringBuilder
-from azure.kusto.ingest import (
-    IngestionProperties,
-    KustoIngestClient,
-    CsvColumnMapping,
-    JsonColumnMapping,
-    ReportMethod,
-    ReportLevel,
-    DataFormat)
+from azure.kusto.ingest import IngestionProperties, KustoIngestClient, CsvColumnMapping, JsonColumnMapping, ReportMethod, ReportLevel, DataFormat
 from azure.kusto.ingest._ingestion_properties import ColumnMapping
 
 from kit.dtypes import dotnet_to_kusto_type
@@ -77,9 +70,7 @@ class KustoBackend:
         tables = []
         client = self.client_provider.get_engine_client()
         try:
-            tables_result = client.execute(
-                "NetDefault", LIST_COLUMNS_BY_TABLE.format(database_name=database_name)
-            ).primary_results[0]
+            tables_result = client.execute("NetDefault", LIST_COLUMNS_BY_TABLE.format(database_name=database_name)).primary_results[0]
 
             for t in tables_result:
                 columns = []
@@ -97,9 +88,7 @@ class KustoBackend:
 
         return Database(database_name, tables)
 
-    def enforce_schema(
-        self, database_schema: Database, schema_conflict: SchemaConflictMode = SchemaConflictMode.Append
-    ):
+    def enforce_schema(self, database_schema: Database, schema_conflict: SchemaConflictMode = SchemaConflictMode.Append):
         try:
             actual_database = self.describe_database(database_schema.name)
 
@@ -129,15 +118,15 @@ class KustoBackend:
     def get_create_ingestion_command(cls, table: str, mapping_name: str, column_mappings: List[ColumnMapping]) -> str:
         mapping_column_class = column_mappings[0].__class__.__name__
 
-        mapping_type = 'json' if mapping_column_class.lower().startswith('json') else 'csv'
+        mapping_type = "json" if mapping_column_class.lower().startswith("json") else "csv"
 
         mappings = []
 
         for col in column_mappings:
-            col_map_str = '{' + ','.join([f'\"{prop}\":\"{name}\"' for prop, name in vars(col).items()]) + '}'
+            col_map_str = "{" + ",".join([f'"{prop}":"{name}"' for prop, name in vars(col).items()]) + "}"
             mappings.append(col_map_str)
 
-        mappings_str = ','.join(mappings)
+        mappings_str = ",".join(mappings)
         return CREATE_INGESTION_MAPPING.format(table=table, mapping_type=mapping_type, mapping_name=mapping_name, mappings=mappings_str)
 
     @classmethod
@@ -164,14 +153,10 @@ class KustoBackend:
 
         if data_format == "csv":
             # TODO: need to add __str__ to columnMapping
-            mapping_func = lambda source_col, target_col: CsvColumnMapping(
-                target_col.name, target_col.data_type.value, source_col.index
-            )
+            mapping_func = lambda source_col, target_col: CsvColumnMapping(target_col.name, target_col.data_type.value, source_col.index)
         if data_format in ["json", "singlejson", "multijson"]:
             # TODO: need to add __str__ to columnMapping
-            mapping_func = lambda source_col, target_col: JsonColumnMapping(
-                target_col.name, f"$.{source_col.name}", cslDataType=target_col.data_type.value
-            )
+            mapping_func = lambda source_col, target_col: JsonColumnMapping(target_col.name, f"$.{source_col.name}", cslDataType=target_col.data_type.value)
 
         for col in mapping.columns:
             kusto_ingest_mapping.append(mapping_func(col.source, col.target))
@@ -190,7 +175,7 @@ class KustoBackend:
             mapping=self.get_ingestion_mapping(source.data_format, mapping),
             reportLevel=ReportLevel.FailuresOnly,
             reportMethod=ReportMethod.Queue,
-            flushImmediately=True
+            flushImmediately=True,
         )
 
         if "batch_id" in kwargs and not kwargs.get("no_wait", False):
@@ -230,8 +215,7 @@ class KustoBackend:
         client = self.client_provider.get_engine_client()
 
         result = client.execute(
-            "NetDefault",
-            f".show ingestion failures | where FailedOn > ago(1h) and Database == '{database}' and IngestionProperties contains ('{tag}')",
+            "NetDefault", f".show ingestion failures | where FailedOn > ago(1h) and Database == '{database}' and IngestionProperties contains ('{tag}')"
         )
 
         return result.primary_results[0]

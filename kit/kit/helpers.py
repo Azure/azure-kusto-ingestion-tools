@@ -84,7 +84,8 @@ def get_azure_cli_auth_token(resource):
         try:
             import os
             import json
-            folder = os.getenv('AZURE_CONFIG_DIR', None) or os.path.expanduser(os.path.join('~', '.azure'))
+
+            folder = os.getenv("AZURE_CONFIG_DIR", None) or os.path.expanduser(os.path.join("~", ".azure"))
             token_path = os.path.join(folder, "accessTokens.json")
             with open(token_path) as f:
                 data = json.load(f)

@@ -15,11 +15,7 @@ class KustoTypeResolver:
     def from_arrow_type(cls, arrow_type: pyarrow.lib.DataType, strict: bool = True):
         if pyarrow.types.is_binary(arrow_type):
             return KustoType.BOOL
-        elif (
-            pyarrow.types.is_int8(arrow_type)
-            or pyarrow.types.is_int16(arrow_type)
-            or pyarrow.types.is_int32(arrow_type)
-        ):
+        elif pyarrow.types.is_int8(arrow_type) or pyarrow.types.is_int16(arrow_type) or pyarrow.types.is_int32(arrow_type):
             return KustoType.INT
         elif pyarrow.types.is_int64(arrow_type):
             return KustoType.LONG
@@ -31,9 +27,7 @@ class KustoTypeResolver:
             return KustoType.DATETIME
         # elif pyarrow.dtypes.is_time(arrow_type):
         #     return KustoType.TIMESPAN
-        elif (
-            pyarrow.types.is_map(arrow_type) or pyarrow.types.is_nested(arrow_type) or pyarrow.types.is_list(arrow_type)
-        ):
+        elif pyarrow.types.is_map(arrow_type) or pyarrow.types.is_nested(arrow_type) or pyarrow.types.is_list(arrow_type):
             return KustoType.DYNAMIC
         else:
             return KustoType.STRING

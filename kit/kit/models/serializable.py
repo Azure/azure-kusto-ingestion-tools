@@ -14,7 +14,7 @@ class SerializableModel:
 
     @classmethod
     def load(cls, file):
-        with open(file, 'r') as f:
+        with open(file, "r") as f:
             data = json.load(f)
 
         return dacite.from_dict(cls, data)

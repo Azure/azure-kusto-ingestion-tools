@@ -60,8 +60,9 @@ class IngestionManifest(SerializableModel):
             self._mappings_dict[mapping.name] = mapping
 
     @classmethod
-    def from_entities_and_database(cls, entities: List[DataEntity], target_database: Database,
-                                   conflict_mode: SchemaConflictMode = SchemaConflictMode.Append) -> IngestionManifest:
+    def from_entities_and_database(
+        cls, entities: List[DataEntity], target_database: Database, conflict_mode: SchemaConflictMode = SchemaConflictMode.Append
+    ) -> IngestionManifest:
         operations = []
         mappings: Dict[str, IngestionMapping] = {}
 
@@ -87,11 +88,7 @@ class IngestionManifest(SerializableModel):
             sources[mapping.name] = [f.path for f in entity.files]
 
             ingestion_sources = [
-                IngestionSource(
-                    files=s_files,
-                    mapping=s_mapping,
-                    data_format=s_mapping.split("_")[-1]
-                ) for s_mapping, s_files in sources.items()
+                IngestionSource(files=s_files, mapping=s_mapping, data_format=s_mapping.split("_")[-1]) for s_mapping, s_files in sources.items()
             ]
 
             operations.append(IngestionOp(target_database.name, ingestion_sources, target_table.name))
@@ -99,8 +96,31 @@ class IngestionManifest(SerializableModel):
         return IngestionManifest([target_database], list(mappings.values()), operations)
 
     @classmethod
-    def from_source_and_database(cls, source: DataSource, target_database: Database,
-                                 conflict_mode: SchemaConflictMode = SchemaConflictMode.Append) -> IngestionManifest:
+    def from_entities(cls, entities: List[DataEntity]) -> IngestionManifest:
+        blank_db = Database("{database_name}", [])
+        operations = []
+        mappings: Dict[str, IngestionMapping] = {}
+
+        for entity in entities:
+            sources: Dict[str, List[str]] = defaultdict(list)
+            target_table = Table.from_entity(entity)
+            mapping = IngestionMapping.generate_mapping(target_table, entity)
+            mappings[mapping.name] = mapping
+
+            sources[mapping.name] = [f.path for f in entity.files]
+
+            ingestion_sources = [
+                IngestionSource(files=s_files, mapping=s_mapping, data_format=s_mapping.split("_")[-1]) for s_mapping, s_files in sources.items()
+            ]
+
+            operations.append(IngestionOp("{database_name}", ingestion_sources, target_table.name))
+
+        return IngestionManifest([blank_db], list(mappings.values()), operations)
+
+    @classmethod
+    def from_source_and_database(
+        cls, source: DataSource, target_database: Database, conflict_mode: SchemaConflictMode = SchemaConflictMode.Append
+    ) -> IngestionManifest:
         operations = []
         mappings: Dict[str, IngestionMapping] = {}
         source_schema = Database.from_source(source)
@@ -127,10 +147,7 @@ class IngestionManifest(SerializableModel):
 
             sources[mapping.name] = [f.path for f in entity.files]
 
-            ingestion_sources = [
-                IngestionSource(s_files, s_mapping, data_format=s_mapping.split("_")[-1])
-                for s_mapping, s_files in sources.items()
-            ]
+            ingestion_sources = [IngestionSource(s_files, s_mapping, data_format=s_mapping.split("_")[-1]) for s_mapping, s_files in sources.items()]
 
             operations.append(IngestionOp(target_database.name, ingestion_sources, target_table.name))
 

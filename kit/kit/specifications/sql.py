@@ -8,9 +8,7 @@ from kit.models.database import Database
 def database_from_sql(sql_path, **kwargs) -> Database:
     uri = urlparse(sql_path)
     if uri.scheme.startswith("http"):
-        raise NotImplementedError(
-            "Currently only supports Local FS. \nIt is planned to resolve the correct storage provider with credentials"
-        )
+        raise NotImplementedError("Currently only supports Local FS. \nIt is planned to resolve the correct storage provider with credentials")
     else:
         with open(sql_path) as f:
             lines = f.readlines()

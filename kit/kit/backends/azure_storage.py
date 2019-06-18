@@ -19,9 +19,7 @@ def table_from_blob(blob_uri, name=None, **kwargs) -> Table:
     blob_service = BlockBlobService(account)
 
     output_stream = io.BytesIO()
-    blob = blob_service.get_blob_to_stream(
-        container, blob_path, output_stream, start_range=0, end_range=minimum_file_size
-    )
+    blob = blob_service.get_blob_to_stream(container, blob_path, output_stream, start_range=0, end_range=minimum_file_size)
     current_file_size = output_stream.tell()
     buffered_stream = io.StringIO()
 

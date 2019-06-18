@@ -83,7 +83,7 @@ def observe_columns_in_object(obj, observed_columns_map: Dict[str, ObservedColum
         if type(value) is dict and object_depth > 1:
             observed_columns_map = observe_columns_in_object(value, observed_columns_map, object_depth=object_depth - 1, path=key)
         else:
-            name = key if path is None else path + '.' + key
+            name = key if path is None else path + "." + key
             if name not in observed_columns_map:
                 observed_columns_map[name] = ObservedColumn(name=name)
 
@@ -107,10 +107,10 @@ def columns_from_json_stream(stream, limit=200, object_depth=1, **kwargs) -> Tup
 
     stream.seek(file_starts_at, 0)
     multi_line = False
-    if first_char == '[':
+    if first_char == "[":
         # TODO: assuming data is an array ('[{...},{...},...,{}]')
         multi_line = True
-        for item in ijson.items(stream, 'item'):
+        for item in ijson.items(stream, "item"):
             if limit is not None and counter >= limit:
                 break
 
@@ -162,10 +162,7 @@ def columns_from_csv_stream(stream, includes_headers=False, limit=200) -> List[C
                 continue
 
             if observed_columns is None:
-                observed_columns = [
-                    ObservedColumn(i, name=first_line[i] if first_line is not None else None)
-                    for i in range(len(line))
-                ]
+                observed_columns = [ObservedColumn(i, name=first_line[i] if first_line is not None else None) for i in range(len(line))]
 
             for col, value in enumerate(line):
                 observed_columns[col].observe(value)
