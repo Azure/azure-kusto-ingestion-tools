@@ -80,10 +80,10 @@ def observe_columns_in_object(obj, observed_columns_map: Dict[str, ObservedColum
     observed_columns_map = observed_columns_map or {}
 
     for key, value in obj.items():
+        name = key if path is None else path + "." + key
         if type(value) is dict and object_depth > 1:
-            observed_columns_map = observe_columns_in_object(value, observed_columns_map, object_depth=object_depth - 1, path=key)
+            observed_columns_map = observe_columns_in_object(value, observed_columns_map, object_depth=object_depth - 1, path=name)
         else:
-            name = key if path is None else path + "." + key
             if name not in observed_columns_map:
                 observed_columns_map[name] = ObservedColumn(name=name)
 
